@@ -240,17 +240,12 @@ def filter_media(pa, command, media, library):
             media = media[:200]
             media.sort(key=lambda x: getattr(x, "addedAt", None), reverse=True)
 
-    if not command["random"] and media:
-        pos = getattr(media[0], "viewOffset", 0) if isinstance(media, list) else getattr(media, "viewOffset", 0)
-        offset = (pos / 1000) - 5 if pos > 15 else 0
-
     if getattr(media, "TYPE", None) == "show":
         unwatched = media.unwatched()[:30]
         media = unwatched if unwatched and not command["random"] else media.episodes()[:30]
     elif getattr(media, "TYPE", None) == "episode":
         episodes = media.show().episodes()
-        episodes = episodes[episodes.index(media) : episodes.index(media) + 30]
-        media = pa.server.createPlayQueue(episodes, shuffle=int(command["random"]))
+        media = episodes[episodes.index(media) : episodes.index(media) + 30]
     elif getattr(media, "TYPE", None) in ["artist", "album"]:
         tracks = media.tracks()
         media = pa.server.createPlayQueue(tracks, shuffle=int(command["random"]))
@@ -260,6 +255,10 @@ def filter_media(pa, command, media, library):
         media = pa.server.createPlayQueue(tracks, shuffle=int(command["random"]))
 
     if getattr(media, "TYPE", None) != "playqueue" and media:
+        if not command["random"]:
+            pos = getattr(media[0], "viewOffset", 0) if isinstance(media, list) else getattr(media, "viewOffset", 0)
+            offset = (pos / 1000) - 5 if pos > 15 else 0
+            _LOGGER.debug("media offset: %u", offset)
         media = pa.server.createPlayQueue(media, shuffle=int(command["random"]))
 
     return [media, 0 if media and media.items[0].listType == "audio" else offset]
